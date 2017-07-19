@@ -70,11 +70,15 @@ minTime = runs[0].start;
 maxTime = runs[runs.length-1].end;
 var startTime = runs[0].start; //1498861011000;
 var endTime = maxTime; //startTime + 14 * 24 * 60 * 60 * 1000;
+var targetStartTime = -1;
+var targetEndTime = -1;
 var startAmount = getTotalAmountAtTimestamp(startTime);
 var endAmount = getTotalAmountAtTimestamp(endTime);
 var totalRaised = getTotalAmountAtTimestamp(maxTime);
 var absoluteAmount = true;
 var lastMouseX = -1;
+var mouseDownX = -1;
+var mouseDownY = -1;
 var mouseHoverX = 0;
 var mouseHoverY = 0;
 var dirty = true;
@@ -177,6 +181,7 @@ function updateCanvasRelativeAmounts() {
 }
 
 canvas.addEventListener("wheel", function(ev) {
+    targetStartTime = targetEndTime = -1;
     var amount = ev.deltaY;
     var minTimeSpan = 60000;
     switch (ev.deltaMode) {
@@ -211,7 +216,10 @@ canvas.addEventListener("wheel", function(ev) {
 });
 
 canvas.addEventListener("mousedown", function(ev) {
+    mouseDownX = ev.clientX;
+    mouseDownY = ev.clientY;
     lastMouseX = ev.clientX;
+    targetStartTime = targetEndTime = -1;
 });
 
 document.body.addEventListener("mousemove", function(ev) {
@@ -235,6 +243,19 @@ document.body.addEventListener("mousemove", function(ev) {
 });
 
 document.body.addEventListener("mouseup", function(ev) {
+    if (Math.abs(mouseDownX - ev.clientX) < 3 && Math.abs(mouseDownY - ev.clientY) < 3) {
+        if (ev.clientY > graphBottom && ev.clientY < runsBottom) {
+            var msPerPixel = (endTime - startTime) / canvas.width;
+            var mouseTime = startTime + msPerPixel * ev.clientX;
+            for (var i = 0; i < runs.length; ++i) {
+                if (runs[i].start <= mouseTime && runs[i].end >= mouseTime) {
+                    targetStartTime = Math.max(minTime, runs[i].start - (runs[i].end - runs[i].start) * 0.1);
+                    targetEndTime = Math.min(maxTime, runs[i].end + (runs[i].end - runs[i].start) * 0.1);
+                    break;
+                }
+            }
+        }
+    }
     lastMouseX = -1;
 });
 
@@ -612,6 +633,28 @@ function update() {
     if (scrollDir != 0) {
         msPerPixel = (endTime - startTime) / canvas.width;
         panTime(msPerPixel * scrollDir);
+    }
+    var zoomed = false;
+    if (targetStartTime != -1) {
+        startTime += (targetStartTime - startTime) * 0.1;
+        if (Math.abs(targetStartTime - startTime) < 1) {
+            startTime = targetStartTime;
+            targetStartTime = -1;
+        }
+        zoomed = true;
+    }
+    if (targetEndTime != -1) {
+        endTime += (targetEndTime - endTime) * 0.1;
+        if (Math.abs(targetEndTime - endTime) < 1) {
+            endTime = targetEndTime;
+            targetEndTime = -1;
+        }
+        zoomed = true;
+    }
+    if (zoomed) {
+        updateCanvasRelativeAmounts();
+        recalculateGroupedDonations();
+        dirty = true;
     }
     if (dirty) {
         drawCanvas();
