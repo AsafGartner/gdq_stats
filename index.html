@@ -260,6 +260,7 @@ document.body.addEventListener("mouseup", function(ev) {
 });
 
 document.body.addEventListener("keydown", function(ev) {
+    targetStartTime = targetEndTime = -1;
     if (ev.which == 37) {
         scrollDir = 50;
     } else if (ev.which == 39) {
@@ -347,7 +348,7 @@ function drawCanvas() {
         }
         var group = groupedDonations[i];
         ctx.fillStyle = "green";
-        var groupTop = graphBottom - (group[2] / groupMaxAmount) * graphBottom;
+        var groupTop = graphBottom - (Math.pow(group[2] / groupMaxAmount, 0.4)) * graphBottom;
         var groupStartX = timestampToCanvas(group[0]);
         var groupEndX = timestampToCanvas(group[1]);
         ctx.fillRect(groupStartX, groupTop, groupEndX - groupStartX, graphBottom - groupTop);
